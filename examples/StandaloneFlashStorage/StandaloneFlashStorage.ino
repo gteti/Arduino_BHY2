@@ -238,21 +238,64 @@ String sensorsToCSVLine()
     return line;
 }
 
-void printFile(mbed::File& file)
-{
-    // Read and print file len-bytes at time
-    // to preserve RAM
-    constexpr size_t len { 256 };
+// void printFile(mbed::File& file)
+// {
+//     // Read and print file len-bytes at time
+//     // to preserve RAM
+//     constexpr size_t len { 256 };
 
-    size_t totalLen { file.size() };
+//     size_t totalLen { file.size() };
 
-    while (totalLen > 0) {
-        char buf[len] {};
+//     while (totalLen > 0) {
+//         char buf[len] {};
 
-        auto read = file.read(buf, len);
-        totalLen -= read;
-        for (const auto& c : buf)
-            Serial.print(c);
+//         auto read = file.read(buf, len);
+//         totalLen -= read;
+//         for (const auto& c : buf)
+//             Serial.print(c);
+//     }
+//     Serial.println();
+// }
+
+void printFile(mbed::File& file) {
+  // Change the printFile so that it read and display only the bytes presents in the file. Otherwise, the Serial.print will add strange characters
+  size_t totalLen = file.size();
+  size_t len = (totalLen > 256) ? 256 : totalLen;
+
+  size_t bytesPrinted = 0; // Total number of byte already printed Numero totale di byte già stampati
+
+  while (totalLen > 0) {
+    char* buf;
+    if (totalLen > 256) {
+      buf = (char*)malloc(256 * sizeof(char));
+      len = 256;
+    } else {
+      buf = (char*)malloc(totalLen * sizeof(char));
+      len = totalLen;
     }
-    Serial.println();
+
+    if (buf == nullptr) {
+      // Handling memory not allocable error
+      Serial.print("Error: Can't allocate memory!!");
+      break;
+    }
+
+    size_t read = file.read(buf, len);
+    totalLen -= read;
+
+    for (size_t i = 0; i < read; i++) {
+      Serial.print(buf[i]);
+      bytesPrinted++;
+    }
+
+    free(buf); // Free the allocated memory
+
+    // If all allocated bytes are already printed, exit the while
+    if (bytesPrinted >= file.size()) {
+      break;
+    }
+
+  }
+
+  Serial.println();
 }
